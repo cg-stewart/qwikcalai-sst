@@ -1,5 +1,5 @@
 {
-  "name": "@monorepo-template/core",
+  "name": "@qwikcalai/core",
   "version": "0.0.0",
   "scripts": {
     "test": "sst shell vitest"
@@ -11,7 +11,16 @@
     ]
   },
   "dependencies": {
-    "sst": "*"
+    "@aws-lambda-powertools/logger": "^2.10.0",
+    "@aws-lambda-powertools/metrics": "^2.10.0",
+    "@aws-lambda-powertools/parser": "^2.10.0",
+    "@aws-lambda-powertools/tracer": "^2.10.0",
+    "@aws-sdk/client-s3": "^3.693.0",
+    "@aws-sdk/lib-dynamodb": "^3.693.0",
+    "ical-generator": "^8.0.1",
+    "openai": "^4.72.0",
+    "sst": "*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "vitest": "^2.0.3"

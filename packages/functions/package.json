@@ -1,8 +1,11 @@
 {
-  "name": "@monorepo-template/functions",
+  "name": "@qwikcalai/functions",
   "version": "0.0.0",
   "dependencies": {
-    "@monorepo-template/core": "*",
+    "@aws-sdk/client-ses": "^3.693.0",
+    "@aws-sdk/client-sns": "^3.693.0",
+    "@aws-sdk/client-sqs": "^3.693.0",
+    "@qwikcalai/core": "*",
     "sst": "*"
   },
   "devDependencies": {

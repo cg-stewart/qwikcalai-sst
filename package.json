@@ -1,5 +1,5 @@
 {
-  "name": "monorepo-template",
+  "name": "qwikcalai",
   "version": "0.0.0",
   "workspaces": [
     "packages/*"
@@ -10,6 +10,7 @@
     "typescript": "5.6.2"
   },
   "dependencies": {
-    "sst": "^3"
+    "sst": "^3",
+    "stripe": "^17.3.1"
   }
 }
