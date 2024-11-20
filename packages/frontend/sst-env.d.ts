@@ -6,9 +6,46 @@ import "sst"
 export {}
 declare module "sst" {
   export interface Resource {
+    "Billing": {
+      "arn": string
+      "type": "sst.aws.SnsTopic"
+    }
+    "BillingQueue": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "EmailDLQ": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "EmailDelivery": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "EmailService": {
+      "configSet": string
+      "sender": string
+      "type": "sst.aws.Email"
+    }
+    "EventProcessing": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "EventProcessingDLQ": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
     "Events": {
       "name": string
       "type": "sst.aws.Dynamo"
+    }
+    "ImageProcessing": {
+      "arn": string
+      "type": "sst.aws.SnsTopic"
+    }
+    "Notifications": {
+      "arn": string
+      "type": "sst.aws.SnsTopic"
     }
     "OpenAIKey": {
       "type": "sst.sst.Secret"

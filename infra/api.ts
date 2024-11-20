@@ -1,3 +1,11 @@
+import {
+  billingTopic,
+  emailQueue,
+  emailService,
+  eventProcessingQueue,
+  imageProcessingTopic,
+  notificationTopic,
+} from "./messaging";
 import { bucket, eventsTable, usersTable } from "./storage";
 
 export const api = new sst.aws.ApiGatewayV2("QwikCalApi", {
@@ -6,7 +14,17 @@ export const api = new sst.aws.ApiGatewayV2("QwikCalApi", {
   transform: {
     route: {
       handler: {
-        link: [eventsTable, usersTable, bucket],
+        link: [
+          eventsTable,
+          usersTable,
+          bucket,
+          notificationTopic,
+          emailQueue,
+          emailService,
+          eventProcessingQueue,
+          billingTopic,
+          imageProcessingTopic,
+        ],
       },
       args: {
         auth: { iam: true },
@@ -14,8 +32,6 @@ export const api = new sst.aws.ApiGatewayV2("QwikCalApi", {
     },
   },
 });
-
-api.route("POST /auth/refresh", "packages/functions/src/auth/refresh.main");
 
 // Event routes
 api.route("GET /events", "packages/functions/src/events/list.main");
@@ -26,12 +42,12 @@ api.route("DELETE /events/{id}", "packages/functions/src/events/delete.main");
 api.route("POST /events/upload", "packages/functions/src/events/upload.main");
 api.route(
   "POST /events/{id}/deliver",
-  "packages/functions/src/events/deliver.main",
+  "packages/functions/src/events/deliver.main"
 );
 
 // Subscription routes
 api.route("POST /billing/create", "packages/functions/src/billing/create.main");
 api.route(
   "POST /billing/webhook",
-  "packages/functions/src/billing/webhook.main",
+  "packages/functions/src/billing/webhook.main"
 );

@@ -19,7 +19,7 @@ export const main = Monitoring.handler(
         // Publish to image processing topic
         await sns.send(
           new PublishCommand({
-            TopicArn: Resource.ImageProcessingTopic.arn,
+            TopicArn: Resource.ImageProcessing.arn,
             Message: JSON.stringify({
               type: "image.uploaded",
               userId,
@@ -31,10 +31,10 @@ export const main = Monitoring.handler(
                 StringValue: "image.uploaded",
               },
             },
-          }),
+          })
         );
 
-        Monitoring.metrics.addMetric("ImageUploaded", 1);
+        Monitoring.trackEvent("ImageUploaded");
 
         return {
           status: "processing",
@@ -49,7 +49,7 @@ export const main = Monitoring.handler(
       // Publish event creation notification
       await sns.send(
         new PublishCommand({
-          TopicArn: Resource.NotificationTopic.arn,
+          TopicArn: Resource.Notifications.arn,
           Message: JSON.stringify({
             type: "event.created",
             userId,
@@ -58,10 +58,10 @@ export const main = Monitoring.handler(
               icsKey,
             },
           }),
-        }),
+        })
       );
 
-      Monitoring.metrics.addMetric("EventCreated", 1, {
+      Monitoring.trackEvent("EventCreated", 1, {
         processingTime: Date.now() - startTime,
       });
 
@@ -73,5 +73,5 @@ export const main = Monitoring.handler(
       Monitoring.logError(error as Error, { userId });
       throw error;
     }
-  },
+  }
 );

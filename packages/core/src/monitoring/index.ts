@@ -1,12 +1,12 @@
-import { Logger } from "@aws-lambda-powertools/logger";
+import { Logger, LogLevel } from "@aws-lambda-powertools/logger";
 import { Tracer } from "@aws-lambda-powertools/tracer";
 import { Metrics, MetricUnit } from "@aws-lambda-powertools/metrics";
-import { Context, APIGatewayProxyEvent } from "aws-lambda";
+import { Context, APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2, SQSEvent } from "aws-lambda";
 
 export module Monitoring {
   const logger = new Logger({
     serviceName: "qwikcalai",
-    logLevel: process.env.POWERTOOLS_LOG_LEVEL || "INFO",
+    logLevel: "INFO"
   });
 
   const tracer = new Tracer({
@@ -32,16 +32,17 @@ export module Monitoring {
   export const trackEvent = (
     name: string,
     value = 1,
-    properties?: Record<string, any>,
+    properties?: Record<string, any> | null,
   ) => {
-    logger.info(name, properties);
-    metrics.addMetric(name, MetricUnits.Count, value);
+    const safeProperties = properties ?? {};
+    logger.info(name, safeProperties);
+    metrics.addMetric(name, MetricUnit.Count, value);
   };
 
-  export function handler(
-    lambda: (event: APIGatewayProxyEvent, context: Context) => Promise<any>,
+  export function handler<TEvent extends APIGatewayProxyEventV2>(
+    lambda: (event: TEvent, context: Context) => Promise<any>,
   ) {
-    return async function (event: APIGatewayProxyEvent, context: Context) {
+    return async function (event: TEvent, context: Context): Promise<APIGatewayProxyStructuredResultV2> {
       const segment = tracer.getSegment();
       const subsegment = segment?.addNewSubsegment("## handler");
 
@@ -56,7 +57,7 @@ export module Monitoring {
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Credentials": true,
+            "Access-Control-Allow-Credentials": "true",
           },
         };
       } catch (error) {
@@ -64,15 +65,36 @@ export module Monitoring {
         return {
           statusCode: 500,
           body: JSON.stringify({
-            error:
-              error instanceof Error ? error.message : "Internal server error",
+            error: error instanceof Error ? error.message : "Internal server error",
           }),
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Credentials": true,
+            "Access-Control-Allow-Credentials": "true",
           },
         };
+      } finally {
+        subsegment?.close();
+        metrics.publishStoredMetrics();
+      }
+    };
+  }
+
+  export function sqsHandler<TResult = { batchItemFailures: { itemIdentifier: string }[] }>(
+    lambda: (event: SQSEvent, context: Context) => Promise<TResult>
+  ) {
+    return async function (event: SQSEvent, context: Context): Promise<TResult> {
+      const segment = tracer.getSegment();
+      const subsegment = segment?.addNewSubsegment("## sqsHandler");
+
+      try {
+        logger.addContext(context);
+        metrics.addMetric("Invocations", MetricUnit.Count, 1);
+
+        return await lambda(event, context);
+      } catch (error) {
+        logError(error as Error);
+        throw error;
       } finally {
         subsegment?.close();
         metrics.publishStoredMetrics();

@@ -26,23 +26,23 @@ export const main = Monitoring.handler(
       new GetCommand({
         TableName: Resource.Events.name,
         Key: { eventId, userId },
-      }),
+      })
     );
 
     if (!result.Item) throw new Error("Event not found");
 
     await sqs.send(
       new SendMessageCommand({
-        QueueUrl: Resource.EmailQueue.url,
+        QueueUrl: Resource.EmailDelivery.url,
         MessageBody: JSON.stringify({
           recipient,
           method,
           eventId,
           userId,
         }),
-      }),
+      })
     );
 
     return { status: "delivery_queued" };
-  },
+  }
 );

@@ -1,6 +1,24 @@
+// Create topic for user notifications first
+export const notificationTopic = new sst.aws.SnsTopic("Notifications");
+
 // Create dead letter queue for failed email processing
 const emailDLQ = new sst.aws.Queue("EmailDLQ", {
   visibilityTimeout: "2 minutes",
+});
+
+// Email Service
+export const emailService = new sst.aws.Email("EmailService", {
+  sender:
+    $app.stage === "production"
+      ? "noreply@qwikcalai.com"
+      : "noreply-dev@qwikcalai.com",
+  events: [
+    {
+      name: "EmailEvents",
+      types: ["bounce", "complaint", "delivery"],
+      topic: notificationTopic.arn,
+    },
+  ],
 });
 
 // Queue for email processing
@@ -21,7 +39,7 @@ emailQueue.subscribe(
       size: 1, // Process one email at a time
       window: "30 seconds",
     },
-  },
+  }
 );
 
 // Image processing notifications
@@ -36,11 +54,8 @@ imageProcessingTopic.subscribe(
     filter: {
       eventType: ["image.uploaded"],
     },
-  },
+  }
 );
-
-// Create topic for user notifications
-export const notificationTopic = new sst.aws.SnsTopic("Notifications");
 
 // Subscribe notification handlers
 notificationTopic.subscribe(
@@ -50,7 +65,7 @@ notificationTopic.subscribe(
     filter: {
       deliveryMethod: ["email"],
     },
-  },
+  }
 );
 
 // Subscribe the email queue to the notification topic
@@ -60,25 +75,29 @@ notificationTopic.subscribeQueue("EmailSubscriber", emailQueue.arn, {
   },
 });
 
+// Create FIFO queue for billing events
+export const billingQueue = new sst.aws.Queue("BillingQueue", {
+  fifo: {
+    contentBasedDeduplication: true,
+  },
+});
+
+billingQueue.subscribe(
+  "packages/functions/src/billing/process-subscription.main"
+);
+
 // Create FIFO topic for billing events to maintain order
 export const billingTopic = new sst.aws.SnsTopic("Billing", {
   fifo: true,
-});
-
-// Subscribe billing handlers
-billingTopic.subscribe(
-  "SubscriptionHandler",
-  "packages/functions/src/billing/process-subscription.main",
-  {
-    filter: {
-      eventType: [
-        "subscription.created",
-        "subscription.updated",
-        "subscription.cancelled",
-      ],
+  transform: {
+    topic: {
+      contentBasedDeduplication: true,
     },
   },
-);
+});
+
+// Subscribe billing queue to the topic
+billingTopic.subscribeQueue("BillingSubscriber", billingQueue);
 
 // Create queue for async event processing
 export const eventProcessingQueue = new sst.aws.Queue("EventProcessing", {
@@ -107,5 +126,5 @@ eventProcessingQueue.subscribe(
         },
       },
     ],
-  },
+  }
 );

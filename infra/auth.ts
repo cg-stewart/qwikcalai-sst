@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { bucket } from "./storage";
+import { bucket, usersTable } from "./storage";
 
 const region = aws.getRegionOutput().name;
 
@@ -29,7 +29,7 @@ export const identityPool = new sst.aws.CognitoIdentityPool(
           resources: [
             $concat(
               bucket.arn,
-              "/private/${cognito-identity.amazonaws.com:sub}/*",
+              "/private/${cognito-identity.amazonaws.com:sub}/*"
             ),
           ],
         },
@@ -44,11 +44,11 @@ export const identityPool = new sst.aws.CognitoIdentityPool(
               aws.getCallerIdentityOutput({}).accountId,
               ":",
               api.nodes.api.id,
-              "/*/*/*",
+              "/*/*/*"
             ),
           ],
         },
       ],
     },
-  },
+  }
 );

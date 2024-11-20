@@ -10,13 +10,13 @@ export default $config({
   },
   async run() {
     await import("./infra/storage");
-    //const api = await import("./infra/api");
+    const api = await import("./infra/api");
     const auth = await import("./infra/auth");
     const web = await import("./infra/web");
 
     return {
       // API Endpoints
-      // apiUrl: api.api.url,
+      apiUrl: api.api.url,
       frontendUrl: web.web.url,
 
       // Auth Configuration

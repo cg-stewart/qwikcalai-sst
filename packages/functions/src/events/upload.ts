@@ -7,7 +7,6 @@ import { Resource } from "sst";
 import { v4 as uuid } from "uuid";
 import { Monitoring } from "@qwikcalai/core/monitoring";
 import { Billing } from "@qwikcalai/core/billing";
-import { Util } from "@qwikcalai/core/util/util";
 
 const s3 = new S3Client({});
 const sns = new SNSClient({});
@@ -30,7 +29,7 @@ export const main = Monitoring.handler(
         Key: key,
         Body: buffer,
         ContentType: "image/jpeg",
-      }),
+      })
     );
 
     await dynamoDb.send(
@@ -43,21 +42,21 @@ export const main = Monitoring.handler(
           status: "processing",
           createdAt: Date.now(),
         },
-      }),
+      })
     );
 
     await sns.send(
       new PublishCommand({
-        TopicArn: Resource.NotificationTopic.arn,
+        TopicArn: Resource.Notifications.arn,
         Message: JSON.stringify({
           type: "image.uploaded",
           eventId,
           userId,
           imageKey: key,
         }),
-      }),
+      })
     );
 
     return { eventId, status: "processing" };
-  },
+  }
 );

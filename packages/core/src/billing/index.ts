@@ -9,7 +9,7 @@ import {
 
 export module Billing {
   const stripe = new Stripe(Resource.StripeSecretKey.value, {
-    apiVersion: "2023-10-16",
+    apiVersion: "2024-10-28.acacia"
   });
 
   const dynamoDb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -41,6 +41,11 @@ export module Billing {
     },
   ];
 
+  // Stripe product and price IDs
+  const STRIPE_PRICES = {
+    premium: "price_1QNAfrP47UgKiQ7uEUZbAvFN"
+  } as const;
+
   export async function createSubscription(params: {
     userId: string;
     email: string;
@@ -54,7 +59,7 @@ export module Billing {
 
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ price: Resource.StripePrices.premium }],
+      items: [{ price: STRIPE_PRICES.premium }],
       payment_behavior: "default_incomplete",
       metadata: { userId: params.userId },
       expand: ["latest_invoice.payment_intent"],

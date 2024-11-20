@@ -23,14 +23,14 @@ export module Util {
       new GetCommand({
         TableName: Resource.Users.name,
         Key: { userId },
-      }),
+      })
     );
 
     return result.Item?.subscriptionStatus === "premium";
   }
 
   export async function generateICSFile(
-    eventData: ExtractedEventData,
+    eventData: ExtractedEventData
   ): Promise<string> {
     const calendar = ical({ name: "QwikcalAI Event" });
 
@@ -42,7 +42,9 @@ export module Util {
       location: eventData.location,
     });
 
-    const key = `ics/${Date.now()}-${eventData.title.toLowerCase().replace(/\s+/g, "-")}.ics`;
+    const key = `ics/${Date.now()}-${eventData.title
+      .toLowerCase()
+      .replace(/\s+/g, "-")}.ics`;
 
     await s3.send(
       new PutObjectCommand({
@@ -50,66 +52,109 @@ export module Util {
         Key: key,
         Body: calendar.toString(),
         ContentType: "text/calendar",
-      }),
+      })
     );
 
     return key;
   }
 
   export async function processImage(
-    imageData: Buffer,
+    imageData: Buffer
   ): Promise<ExtractedEventData> {
-    const base64Image = imageData.toString("base64");
+    try {
+      const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract event details from this image. Return a JSON object with title, startTime (ISO format), endTime (ISO format, optional), location (optional), and description (optional).",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${imageData.toString("base64")}`,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 300,
+      });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract event details from this image. Return a JSON object with title, startTime (ISO string), endTime (ISO string), location, and description. If any field is unclear, omit it.",
-            },
-            {
-              type: "image_url",
-              image_url: `data:image/jpeg;base64,${base64Image}`,
-            },
-          ],
-        },
-      ],
-      max_tokens: 1000,
-      response_format: { type: "json_object" },
-    });
+      const content = response.choices[0].message.content;
+      if (!content) {
+        throw new Error("No content in OpenAI response");
+      }
 
-    return JSON.parse(
-      response.choices[0].message.content,
-    ) as ExtractedEventData;
+      return JSON.parse(content);
+    } catch (error) {
+      console.error("Error processing image:", error);
+      throw error;
+    }
+  }
+
+  export function getEventEmailTemplate(eventData: ExtractedEventData, icsUrl: string): string {
+    return `
+      <html>
+        <body>
+          <h1>${eventData.title}</h1>
+          ${eventData.location ? `<p>Location: ${eventData.location}</p>` : ''}
+          ${eventData.description ? `<p>Description: ${eventData.description}</p>` : ''}
+          <p>Start: ${new Date(eventData.startTime).toLocaleString()}</p>
+          ${eventData.endTime ? `<p>End: ${new Date(eventData.endTime).toLocaleString()}</p>` : ''}
+          <p><a href="${icsUrl}">Add to Calendar</a></p>
+        </body>
+      </html>
+    `;
+  }
+
+  export function extractEventData(event: any): { text?: string; image?: string } {
+    if (typeof event !== 'object' || event === null) {
+      throw new Error('Invalid event data');
+    }
+
+    if ('text' in event && typeof event.text === 'string') {
+      if (!event.text.trim()) {
+        throw new Error('Text cannot be empty');
+      }
+      return { text: event.text };
+    }
+
+    if ('image' in event && typeof event.image === 'string') {
+      if (!event.image.trim()) {
+        throw new Error('Image data cannot be empty');
+      }
+      return { image: event.image };
+    }
+
+    throw new Error('Invalid event data format');
   }
 
   export function handler(lambda: Function) {
     return async function (event: any, context: any) {
+      let body, statusCode;
+
       try {
-        return {
-          statusCode: 200,
-          body: await lambda(event, context),
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Credentials": true,
-          },
-        };
+        body = await lambda(event, context);
+        statusCode = 200;
       } catch (error) {
-        return {
-          statusCode: 500,
-          body: JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
-          }),
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Credentials": true,
-          },
-        };
+        console.error(error);
+        body = { error: error instanceof Error ? error.message : String(error) };
+        statusCode = 500;
       }
+
+      return {
+        statusCode,
+        body: JSON.stringify(body),
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": true,
+        },
+      };
     };
   }
 }

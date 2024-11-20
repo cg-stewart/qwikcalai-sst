@@ -6,9 +6,10 @@
     "@aws-sdk/client-sns": "^3.693.0",
     "@aws-sdk/client-sqs": "^3.693.0",
     "@qwikcalai/core": "*",
+    "aws-sdk": "^2.1692.0",
     "sst": "*"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.137"
+    "@types/aws-lambda": "^8.10.145"
   }
 }
